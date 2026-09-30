@@ -1,0 +1,35 @@
+{
+  "name": "advanz-command-center",
+  "version": "0.1.0",
+  "description": "Advanz Command Center: el panel de tu ecommerce con lectura, dentro de Claude. Shopify, Meta, Google Ads, GA4, Search Console, Klaviyo y Clarity.",
+  "type": "module",
+  "bin": {
+    "command-center": "bin/instalar.mjs"
+  },
+  "files": [
+    "bin",
+    "skills",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "UNLICENSED",
+  "author": "Advanz Growth Partner (https://advanz.cl)",
+  "homepage": "https://advanz.cl",
+  "keywords": [
+    "claude",
+    "claude-code",
+    "skills",
+    "ecommerce",
+    "dashboard",
+    "shopify",
+    "meta-ads",
+    "google-ads",
+    "ga4",
+    "klaviyo"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}
