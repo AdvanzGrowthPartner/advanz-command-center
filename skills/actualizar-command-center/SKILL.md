@@ -56,12 +56,12 @@ El plan es una lista de pasos `{ tool, args, save_as, top?, para }`, generada de
 | `google_ads.search` | `search` / `search_search` del conector de Google Ads |
 | `ga4.run_report` | `run_report` de Google Analytics |
 | `gsc.<tool>` | la herramienta del mismo nombre de Search Console |
-| `meta.<tool>` | la herramienta del mismo nombre de Meta Ads |
+| `meta.<tool>` | la herramienta del mismo nombre de Meta Ads (`ads_get_ad_entities`, `ads_get_creatives`, …) |
 | `klaviyo.query_metric_aggregates` | `query_metric_aggregates` de Klaviyo: `body` va como **texto JSON**, tal cual viene en el plan |
 | `klaviyo.get_flows` / `klaviyo.get_campaigns` | la herramienta del mismo nombre de Klaviyo |
 | `clarity.query-analytics-dashboard` | `query-analytics-dashboard` de Microsoft Clarity |
 
-- Llama la herramienta con `args` **exactamente** como vienen. En Meta agrega `client_conversation_id` = `CC` + `<hasta>` sin guiones + 3 letras del cliente, completado con `X` hasta 20 caracteres (p. ej. `CC20261015MIMXXXXXXX`), igual en toda la captura, y `advertiser_request: "Captura del Command Center"`.
+- Llama la herramienta con `args` **exactamente** como vienen. Si el paso trae `args_from`, sus argumentos dependen de una respuesta anterior: obtenlos con `CC args "<config>" "<carpeta-captura>" <desde> <hasta> <save_as>` (después de guardar el paso del que dependen) y usa esa salida tal cual. En Meta agrega `client_conversation_id` = `CC` + `<hasta>` sin guiones + 3 letras del cliente, completado con `X` hasta 20 caracteres (p. ej. `CC20261015MIMXXXXXXX`), igual en toda la captura, y `advertiser_request: "Captura del Command Center"`.
 - **Guarda la respuesta sin modificarla** en `capturas/<hasta>/raw/<save_as>`:
   - Si el sistema dejó la respuesta en un archivo (p. ej. `tool-results/*.txt`): `CC save "<carpeta-captura>" <save_as> "<archivo>"`. No la copies a mano.
   - Si llegó en la conversación: escríbela tal cual con la herramienta de escritura de archivos. Si es texto que ya es JSON, guárdalo como ese JSON; si es texto plano, como `{"result": "<texto>"}`. **Nunca resumas, recortes ni reordenes.**
