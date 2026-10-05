@@ -1,6 +1,6 @@
 {
   "name": "advanz-command-center",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Advanz Command Center: el panel de tu ecommerce con lectura, dentro de Claude. Shopify, Meta, Google Ads, GA4, Search Console, Klaviyo y Clarity.",
   "type": "module",
   "bin": {

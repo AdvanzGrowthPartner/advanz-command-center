@@ -1,4 +1,4 @@
-// Advanz Command Center v0.2.0 · generado por scripts/build-plugin.mjs. No editar: se edita en packages/command-center.
+// Advanz Command Center v0.2.1 · generado por scripts/build-plugin.mjs. No editar: se edita en packages/command-center.
 
 // scripts/cc.ts
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -103,8 +103,13 @@ function warRoomBlock(config2, rows, hoy, extras = {}) {
   const fase = hoy < ev.desde ? "antes" : hoy > hasta ? "despues" : "durante";
   const conv = (r) => r.currency ? toReport(config2, r.value, r.currency, r.date_to) : r.value;
   const byDay = (src) => {
+    const uniq = /* @__PURE__ */ new Map();
+    for (const r of rows) {
+      if (!src(r) || r.date_from !== r.date_to) continue;
+      uniq.set([r.source, r.level, r.metric, r.entity_id, r.date_from, JSON.stringify(r.dims ?? {})].join("|"), r);
+    }
     const m = /* @__PURE__ */ new Map();
-    for (const r of rows.filter((x) => src(x) && x.date_from === x.date_to)) m.set(r.date_from, (m.get(r.date_from) ?? 0) + conv(r));
+    for (const r of uniq.values()) m.set(r.date_from, (m.get(r.date_from) ?? 0) + conv(r));
     return m;
   };
   const store = (metric) => (r) => (r.source === "shopify" || r.source === "tiendanube") && r.level === "store" && r.metric === metric && !r.dims?.hora;
@@ -257,7 +262,7 @@ function warRoomBlock(config2, rows, hoy, extras = {}) {
   };
   const veredicto = fase === "antes" ? { senal: prep.senal, titular: `${faltan === 0 ? `${ev.nombre} empieza hoy` : `Faltan ${faltan} ${faltan === 1 ? "d\xEDa" : "d\xEDas"} para ${ev.nombre}`}. Meta: ${money2(meta)}${crece !== null ? ` (${crece >= 0 ? "+" : "\u2212"}${pctN(Math.abs(crece))} sobre ${referencia.nombre})` : ""}.`, detalle: prep.titular } : { senal: acumuladoL.senal, titular: acumuladoL.titular, detalle: acumuladoL.detalle ?? diarioL.titular };
   return {
-    evento: { nombre: ev.nombre, desde: ev.desde, hasta, dias: N },
+    evento: { nombre: ev.nombre, desde: ev.desde, hasta, dias: N, enlaces: (ev.enlaces ?? []).filter((e2) => /^https:\/\//.test(e2.url)) },
     fase,
     dias_para_inicio: faltan,
     dia_actual,
@@ -2619,15 +2624,15 @@ function compDashboard(input) {
   const monedas = /* @__PURE__ */ new Set([config2.moneda_reporte, ...config2.tiendas.map((t) => t.moneda), "USD"]);
   const marca = config2.marca_reporte.nombre.toLowerCase();
   const excluir = new Set((cfg.excluir_paginas ?? []).map(String));
-  const seguidos = new Set(config2.competidores.map((c) => (c.pagina_meta ?? c.nombre).toLowerCase()));
+  const seguidos = new Set(config2.competidores.flatMap((c) => [c.nombre.toLowerCase(), ...c.pagina_meta ? [String(c.pagina_meta).toLowerCase()] : []]));
   const ahora = Date.parse(capturado) / 1e3;
   const dias = (a) => a.ad_delivery_start_time ? Math.max(0, Math.floor((ahora - a.ad_delivery_start_time) / 86400)) : null;
   let total = null, descartados = 0;
   const vistos = /* @__PURE__ */ new Set();
   const ads = [];
-  for (const raw of input.raws) {
+  for (const raw of [...input.raws, ...input.rawCompetidores !== void 0 ? [input.rawCompetidores] : []]) {
     const p = parse(raw);
-    total = (total ?? 0) + (p.total ?? 0);
+    if (raw !== input.rawCompetidores) total = (total ?? 0) + (p.total ?? 0);
     for (const a of p.ads) {
       if (vistos.has(a.id)) continue;
       vistos.add(a.id);
@@ -2654,7 +2659,7 @@ function compDashboard(input) {
       titulos: [...new Set(xs.map((a) => (a.ad_creative_link_title ?? "").trim()).filter((t) => t && !/^[|\s]+$/.test(t)))].slice(0, 4),
       ejemplos: ordenados.filter((a) => a.ad_snapshot_url).slice(0, 3).map((a) => ({ url: a.ad_snapshot_url, titulo: (a.ad_creative_link_title ?? "").trim(), dias: dias(a) })),
       propia: esPropia(xs[0]),
-      seguido: seguidos.has(xs[0].page_name.toLowerCase())
+      seguido: seguidos.has(page_id) || seguidos.has(xs[0].page_name.toLowerCase())
     };
   }).sort((a, b) => Number(b.seguido) - Number(a.seguido) || b.veteranos - a.veteranos || b.anuncios - a.anuncios);
   const propia = anunciantes.find((a) => a.propia) ?? null;
@@ -2686,7 +2691,10 @@ function compDashboard(input) {
   } : {
     senal: vet.length ? "oportunidad" : "estable",
     titular: vet.length ? `${vet.length} ${vet.length === 1 ? "competidor mantiene" : "competidores mantienen"} anuncios activos hace m\xE1s de 30 d\xEDas: son piezas que les est\xE1n funcionando.` : "Ning\xFAn competidor mantiene anuncios activos por m\xE1s de 30 d\xEDas en esta muestra.",
-    detalle: vet[0] ? `${vet[0].pagina} tiene ${vet[0].veteranos} as\xED; el m\xE1s antiguo lleva ${n06(vet[0].mas_antiguo_dias)} d\xEDas.` : void 0,
+    detalle: vet[0] ? `${vet[0].pagina} tiene ${vet[0].veteranos} as\xED; el m\xE1s antiguo lleva ${n06(vet[0].mas_antiguo_dias)} d\xEDas.` : (() => {
+      const o = [...otros].filter((a) => a.mas_antiguo_dias !== null).sort((a, b) => (b.mas_antiguo_dias ?? 0) - (a.mas_antiguo_dias ?? 0))[0];
+      return o ? `El anuncio activo m\xE1s antiguo es de ${o.pagina} y lleva ${n06(o.mas_antiguo_dias)} d\xEDas: la categor\xEDa est\xE1 renovando piezas seguido antes del Cyber.` : void 0;
+    })(),
     accion: vet[0] ? `Siguiente paso: revisar esas piezas (bot\xF3n "Ver anuncio") para entender qu\xE9 \xE1ngulo y oferta sostienen, y usarlo como referencia para tu pr\xF3xima ronda de contenido.` : void 0,
     respaldo: { contra, ...conf, medicion: "Antig\xFCedad de los anuncios de la competencia en la pr\xF3xima lectura." },
     que_es: "Cu\xE1ntos d\xEDas lleva activo cada anuncio de la competencia.",
@@ -2838,7 +2846,7 @@ function parse2(raw) {
 function competenciaBlock(config2, capturedAt, raws) {
   const cfg = config2.competencia;
   const excluir = new Set((cfg?.excluir_paginas ?? []).map(String));
-  const seguidos = new Set(config2.competidores.map((c) => (c.pagina_meta ?? c.nombre).toLowerCase()));
+  const seguidos = new Set(config2.competidores.flatMap((c) => [c.nombre.toLowerCase(), ...c.pagina_meta ? [String(c.pagina_meta).toLowerCase()] : []]));
   const now = Date.parse(capturedAt) / 1e3;
   let total = null;
   const by = /* @__PURE__ */ new Map();
@@ -4309,7 +4317,12 @@ function assemble(input) {
     campanasAnt: read("klaviyo-campaigns-prev.json"),
     escenarios: findings
   }) : null;
-  const compDash = config2.competencia ? compDashboard({ config: config2, capturado: input.capturado, raws: library }) : null;
+  const compDash = config2.competencia ? compDashboard({
+    config: config2,
+    capturado: input.capturado,
+    raws: (config2.competencia.terminos ?? []).map((t) => read(`meta-library-${slug(t)}.json`)).filter((x) => x !== void 0),
+    rawCompetidores: read("meta-library-competidores.json")
+  }) : null;
   const googleDashboard = gadsDashboard(config2, daily.series, input.desde, input.hasta, previousPeriod(input.desde, input.hasta), findings.filter((f) => f.page === "google_ads"), arbol.economia);
   return buildBundle({
     config: config2,
